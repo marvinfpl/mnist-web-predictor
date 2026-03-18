@@ -35,3 +35,11 @@ function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     })
 }
+
+function sendInput() {
+    const canvas = document.getElementById("canvas")
+    const ctx = canvas.getContext("2d")
+    const image = ctx.getImageData()
+    canvas.toDataURL("image")
+    // convert the image into a json array, send it to python
+}

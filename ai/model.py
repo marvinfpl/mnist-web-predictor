@@ -31,25 +31,20 @@ class DigitsClassifier(nn.Module):
         return y.logit()
     
 class Trainer():
-    def __init__(self, in_ch:int, out_ch:int, criterion=None, metrics=None, lr:float=0.003, batch_size:int=64, epochs:int=1000, max_grad_norm:float=1.0, kernel_size:int=3, stride:int=1, padding:int=1):
+    def __init__(self, in_ch:int, out_ch:int, lr:float=0.003, batch_size:int=64, epochs:int=1000, max_grad_norm:float=1.0, kernel_size:int=3, stride:int=1, padding:int=1):
         self.model = DigitsClassifier(in_ch, out_ch, kernel_size, stride, padding)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
         self.batch_size = batch_size
         self.epochs = epochs
         self.max_grad_norm = max_grad_norm
-        if criterion is None:
-            self.criterion = nn.CrossEntropyLoss()
-        else:
-            self.criterion = criterion()
-        if metrics is None:
-            self.metrics = []
-
+        self.criterion = nn.CrossEntropyLoss()
 
         wandb.init(project="mnist classifier", config={
             "epochs": epochs,
             "learning_rate": lr,
-            "criterion": criterion,
+            "criterion": "cross_entropy",
+            "optimizer": "adam",
             "batch_size": batch_size,
             "in_channels": in_ch,
             "out_channels": out_ch,
@@ -97,7 +92,7 @@ class Trainer():
         loss = self.criterion(y_pred, y_test)
         
         report = classification_report(y_test, y_pred)
-        return loss, report
+        return loss.item(), report
 
     def save(self):
         torch.save(self.model.state_dict(), "model/model.pth")
