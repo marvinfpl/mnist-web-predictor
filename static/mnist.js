@@ -35,7 +35,9 @@ function predictDigit() {
     const canvas = document.getElementById("canvas");
     const image = canvas.toDataURL("image/png");
 
-    fetch("predict.php", {
+    clearCanvas();
+
+    fetch("/predict", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"

@@ -1,36 +1,63 @@
-import sys
-from PIL import Image, ImageChops
-from torchvision import transforms
 import torch
-import io, base64
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import transforms, datasets
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 from model import MnistClassifier
-from flask import Flask, request, jsonify
 
-app = Flask(__name__)
-
-model = MnistClassifier()
-model.load_state_dict(torch.load("./model/mnist_classifier.pth", map_location="cpu"))
-model.eval()
-
-
+epochs = 15
+batch_size = 128
+learning_rate = 0.001
+criterion = nn.CrossEntropyLoss()
+    
 transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,)),
+    transforms.Normalize((0.5, ), (0.5,)),
 ])
+    
+train = datasets.MNIST(root=".", train=True, transform=transform, download=True)
+train_loader = DataLoader(train, batch_size=batch_size, shuffle=True)
+test = datasets.MNIST(root=".", train=False, transform=transform)
+test_loader = DataLoader(test, batch_size=batch_size)
 
-@app.route("/predict", method=["POST"])
-def predict():
-    data = request.get_json()
-    image_b64 = data["image"].split(",")[1]
-    image = Image.open(io.BytesIO(base64.b64decode(image_b64))).convert("L").resize((28, 28))
-    image = ImageChops.invert(image)
-    img = transform(image).unsqueeze(0)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = MnistClassifier()
+model.to(device)
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+model.train()
 
-    with torch.no_grad():
-        output = model(img)
-        pred = torch.argmax(output, dim=1).item()
+for epoch in tqdm(range(epochs), desc=False):
+    total_loss = 0.0
 
-    return jsonify({"prediction": pred})
+    for inputs, labels in train_loader:
+        inputs, labels = inputs.to(device), labels.to(device)
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        total_loss += loss.item()
 
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    print(f"Epoch: {epoch+1}, Total loss: {(total_loss/len(train_loader)):.4f} ")
+
+
+model.eval()
+
+total = 0
+correct = 0
+loss = 0.0
+with torch.no_grad():
+    for inputs, labels in test_loader:
+        inputs, labels = inputs.to(device), labels.to(device)
+        total += labels.size(0)
+        outputs = model(inputs)
+
+        loss += criterion(outputs, labels).item()
+        _, predicted = torch.max(outputs, 1)
+        correct += (predicted == labels).sum().item()
+
+print(f" --- Total loss: {loss:.4f}, Accuracy: {(correct / total):.4f} --- ")
+
+torch.save(model.state_dict(), "./model/mnist_classifier.pth")
