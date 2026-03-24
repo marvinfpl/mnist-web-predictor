@@ -17,8 +17,8 @@ function drawOnCanvas() {
         if (!draw) return;
 
         ctx.lineCap = "round";
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = "black";
+        ctx.lineWidth = 22;
+        ctx.strokeStyle = "Black";
 
         ctx.lineTo(e.offsetX, e.offsetY);
         ctx.stroke();
@@ -47,7 +47,7 @@ function predictDigit() {
     .then(res => res.json())
     .then(data => {
         console.log(data)
-        document.getElementById("prediction").innerHTML = `<strong>Prediction: </strong> ${data.prediction}`;
+        document.getElementById("prediction").innerHTML = `<strong>Prediction: </strong> ${data.prediction} with a solid ${data.confidence_score}% confidence score! `;
     })
     .catch(err => console.error(err)
     );
